@@ -19,7 +19,7 @@ CURRENT_CMD=$(bootctl list | grep options | head -n1 | cut -f2- -d":")
 ### End of region ###
 
 ### Help message
-if [[ $1 -eq '-h' ]] ||  [[ $1 -eq '--help' ]]
+if [[ $1 == '-h' ]] ||  [[ $1 == '--help' ]]
 then
 cat << EOF
  __| |____________________________________________________________________________________________________________________________
@@ -81,7 +81,10 @@ fi
 
 
 ### Linux Kernel Images Detection ###
-
+if [[ $1 == '-x' ]] ||  [[ $1 == '--only-os-prober' ]]
+then
+	set -e
+else
 cat << EOF
  _______________________________________
 < Detecting Linux Kernel Images in /boot >
@@ -110,7 +113,7 @@ for kernels in $(find /boot/vmlinuz* | cut -d '-' -f2- | grep -vi vmlinuz); do e
 ### End of region ###
 
 ### Change kernel options ###
-if echo $@ | grep change-options > /dev/null 2>&1
+if [[ $1 == '-o' ]] ||  [[ $1 == '--change-options' ]]
 then
 	echo "Changing Linux Boot Options"
 	BOOTCTL_CMD=$(bootctl list | grep options | head -n1 | cut -f2- -d":")
@@ -123,3 +126,49 @@ then
 	echo "to: $(cat /tmp/update-systemd-boot/options)"
 	rm -rf /tmp/update-systemd-boot/
 fi
+fi
+### End of region ###
+
+### Windows Boot Manager Detection ###
+if [[ $1 == '-o' ]] ||  [[ $1 == '--change-options' ]] || [[ $1 == '-x' ]] ||  [[ $1 == '--only-os-prober' ]]
+then
+if [ -z "$WIN_DRIVE" ]
+then
+echo "os-prober has not detected a Windows EFI partition! no action is needed." & exit 0
+else
+if [[ "$WIN_DRIVE" == "$SDB_DRIVE" ]]
+then
+cat << EOF
+ ________________________________
+< Detecting Windows Boot Manager >
+ --------------------------------
+   \'
+    \'	   _.-;;-._
+    '-..-'|   ||   |
+    '-..-'|_.-;;-._|
+    '-..-'|   ||   |
+    '-..-'|_.-''-._|
+EOF
+echo "systemd-boot EFI and Windows EFI partition are the SAME! no action is needed." & exit 0
+else
+cat << EOF
+ ________________________________
+< Detecting Windows Boot Manager >
+ --------------------------------
+   \'
+    \'	   _.-;;-._
+    '-..-'|   ||   |
+    '-..-'|_.-;;-._|
+    '-..-'|   ||   |
+    '-..-'|_.-''-._|
+EOF
+echo "os-prober has detected a Windows EFI partition! adding to systemd-boot efi."
+mkdir -p /tmp/WIN_DRIVE
+mount "$WIN_DRIVE" /tmp/WIN_DRIVE
+cp -ax /tmp/WIN_DRIVE/EFI/Microsoft $SDB_EFI/EFI/Microsoft
+umount /tmp/WIN_DRIVE
+exit 0
+fi
+fi
+fi
+### End of region ###
