@@ -130,7 +130,7 @@ fi
 ### End of region ###
 
 ### Windows Boot Manager Detection ###
-if [[ $1 == '-o' ]] ||  [[ $1 == '--change-options' ]] || [[ $1 == '-x' ]] ||  [[ $1 == '--only-os-prober' ]]
+if [[ $1 == '-w' ]] ||  [[ $1 == '--with-os-prober' ]] || [[ $1 == '-x' ]] ||  [[ $1 == '--only-os-prober' ]]
 then
 if [ -z "$WIN_DRIVE" ]
 then
