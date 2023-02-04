@@ -7,7 +7,7 @@ Standards-Version: 3.9.5
 
 Package: update-systemd-boot
 Architecture: all
-Depends: systemd
-         systemd-boot
-         os-prober
+Depends: systemd,
+         systemd-boot,
+         os-prober,
 Description: PikaOS Wrapper for updating systemd-boot configrations
