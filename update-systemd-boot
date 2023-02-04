@@ -1,5 +1,15 @@
 #! /bin/bash
 
+set -e
+
+WHO=$(whoami)
+
+if [[ $WHO != "root" ]]
+then
+	echo "Please Run as Root"
+	exit 100
+fi
+
 ### GLOBAL ENV VARS ###
 WIN_DRIVE=$(os-prober | cut -d/ -f1-3 | tr -d '@')
 SDB_EFI=$(bootctl -x)
@@ -9,7 +19,29 @@ CURRENT_CMD=$(bootctl list | grep options | head -n1 | cut -f2- -d":")
 ### End of region ###
 
 ### Help message
+if [[ $1 -eq '-h' ]] ||  [[ $1 -eq '--help' ]]
+then
+cat << EOF
+ __| |____________________________________________________________________________________________________________________________
+(__| |____________________________________________________________________________________________________________________________)
+   | |  update-systemd-boot
+PikaOS Wrapper for updating systemd-boot configrations
 
+Usage:
+update-systemd-boot [arguments if needed]
+
+Arguments:
+-h | | --help: Displays this help message.
+-w | | --with-os-prober: Does the usual Linux entry generation along side using os prober for detecting Windows EFI partitions.
+-x | | --only-os-prober: Uses os prober for detecting Windows EFI partitions without the usual Linux entry generation.
+-o | | --change-options: Brings up a text editor to modify the Linux commandline boot options.
+ __| |____________________________________________________________________________________________________________________________
+(__|_|____________________________________________________________________________________________________________________________)
+EOF
+exit
+fi
+
+### End of region ###
 
 ### Print system info ###
 if [ -z "$SDB_EFI" ]
