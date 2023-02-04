@@ -10,8 +10,9 @@ then
 	exit 100
 fi
 
+mkdir -p /tmp/update-systemd-boot/
+
 ### GLOBAL ENV VARS ###
-WIN_DRIVE=$(os-prober | cut -d/ -f1-3 | tr -d '@')
 SDB_EFI=$(bootctl -x)
 SDB_DRIVE=$(findmnt "$SDB_EFI" | tail +2 | cut -f2 -d" ")
 MACHINE_ID=$(cat /etc/machine-id)
@@ -58,12 +59,10 @@ else
 	echo "systemd-boot partition: $SDB_DRIVE"
 fi
 
-if [ -z "$WIN_DRIVE" ]
-then
-	echo "Windows EFI partition: None"
-else
-	echo "Windows EFI partition: $WIN_DRIVE"
-fi
+echo "Other EFI partitions:"
+rm -rf /tmp/update-systemd-boot/efi_partitions
+for partitions in $(os-prober | cut -d/ -f1-3 | tr -d '@'); do echo "$partitions" > /tmp/update-systemd-boot/efi_partitions && echo "$partitions"; done
+
 
 if [ -z "$MACHINE_ID" ]
 then
@@ -117,7 +116,6 @@ if [[ $1 == '-o' ]] ||  [[ $1 == '--change-options' ]]
 then
 	echo "Changing Linux Boot Options"
 	BOOTCTL_CMD=$(bootctl list | grep options | head -n1 | cut -f2- -d":")
-	mkdir -p /tmp/update-systemd-boot/
 	if [ ! -f /tmp/update-systemd-boot/options ]
 	then
 		echo $BOOTCTL_CMD > /tmp/update-systemd-boot/options
@@ -135,15 +133,11 @@ fi
 ### Windows Boot Manager Detection ###
 if [[ $1 == '-w' ]] ||  [[ $1 == '--with-os-prober' ]] || [[ $1 == '-x' ]] ||  [[ $1 == '--only-os-prober' ]]
 then
-if [ -z "$WIN_DRIVE" ]
-then
-echo "os-prober has not detected a Windows EFI partition! no action is needed." & exit 0
-else
-if [[ "$WIN_DRIVE" == "$SDB_DRIVE" ]]
+if [ ! -s /tmp/update-systemd-boot/efi_partitions ]
 then
 cat << EOF
  ________________________________
-< Detecting Windows Boot Manager >
+< Detecting Other EFI ENTRIES >
  --------------------------------
    \'
     \'	   _.-;;-._
@@ -152,11 +146,12 @@ cat << EOF
     '-..-'|   ||   |
     '-..-'|_.-''-._|
 EOF
-echo "systemd-boot EFI and Windows EFI partition are the SAME! no action is needed." & exit 0
+echo "os-prober has not detected a another EFI partition! no action is needed." & exit 0
 else
+
 cat << EOF
  ________________________________
-< Detecting Windows Boot Manager >
+< Detecting Other EFI ENTRIES >
  --------------------------------
    \'
     \'	   _.-;;-._
@@ -165,13 +160,10 @@ cat << EOF
     '-..-'|   ||   |
     '-..-'|_.-''-._|
 EOF
-echo "os-prober has detected a Windows EFI partition! adding to systemd-boot efi."
-mkdir -p /tmp/WIN_DRIVE
-mount "$WIN_DRIVE" /tmp/WIN_DRIVE
-cp -ax /tmp/WIN_DRIVE/EFI/Microsoft $SDB_EFI/EFI/Microsoft
-umount /tmp/WIN_DRIVE
+echo "os-prober has detected a another EFI partition! adding to systemd-boot EFI."
+for efis in $(cat /tmp/update-systemd-boot/efi_partitions); do echo mkdir -p /tmp/update-systemd-boot/$efis && mount "$efis" /tmp/update-systemd-boot/$efis && cp -avx /tmp/update-systemd-boot/$efis/EFI $SDB_EFI/EFI || echo "not EFI" && umount /tmp/update-systemd-boot/$efis; done
 exit 0
-fi
+
 fi
 fi
 ### End of region ###
