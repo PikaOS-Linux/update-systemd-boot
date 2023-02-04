@@ -1,0 +1,93 @@
+#! /bin/bash
+
+### GLOBAL ENV VARS ###
+WIN_DRIVE=$(os-prober | cut -d/ -f1-3 | tr -d '@')
+SDB_EFI=$(bootctl -x)
+SDB_DRIVE=$(findmnt "$SDB_EFI" | tail +2 | cut -f2 -d" ")
+MACHINE_ID=$(cat /etc/machine-id)
+CURRENT_CMD=$(bootctl list | grep options | head -n1 | cut -f2- -d":")
+### End of region ###
+
+### Help message
+
+
+### Print system info ###
+if [ -z "$SDB_EFI" ]
+then
+	echo "Critical Error! systemd-boot isn't installed." & exit 1
+else
+	echo "systemd-boot EFI path: $SDB_EFI"
+fi
+
+if [ -z "$SDB_DRIVE" ]
+then
+	echo "systemd-boot partition: None"
+else
+	echo "systemd-boot partition: $SDB_DRIVE"
+fi
+
+if [ -z "$WIN_DRIVE" ]
+then
+	echo "Windows EFI partition: None"
+else
+	echo "Windows EFI partition: $WIN_DRIVE"
+fi
+
+if [ -z "$MACHINE_ID" ]
+then
+	echo "Machine ID: None"
+else
+	echo "Machine ID: $MACHINE_ID"
+fi
+
+if [ -z "$CURRENT_CMD" ]
+then
+	echo "Kernel Boot Options: None"
+else
+	echo "Kernel Boot Options: $CURRENT_CMD"
+fi
+
+
+### Linux Kernel Images Detection ###
+
+cat << EOF
+ _______________________________________
+< Detecting Linux Kernel Images in /boot >
+ ---------------------------------------
+   \'
+    \'
+        .--.
+       |o_o |
+       |:_/ |
+      //   \ )
+     (|     | )
+    /'\_   _/;/
+    \___)=(___/
+
+EOF
+
+for kernels in $(find /boot/vmlinuz* | cut -d '-' -f2- | grep -vi vmlinuz); do echo "Detected Kernel: $kernels" ; done
+### End of region ###
+
+### Linux Kernel Entry Generation ###
+echo "Removing old entries."
+rm -rfv $SDB_EFI/"$MACHINE_ID"
+rm -rfv $SDB_EFI/loader/entries/"$MACHINE_ID"*
+echo "Generating new entries."
+for kernels in $(find /boot/vmlinuz* | cut -d '-' -f2- | grep -vi vmlinuz); do echo "Generating entry for $kernels" && kernel-install add $kernels /boot/vmlinuz-$kernels /boot/initrd.img-$kernels || echo "Failed to Generate an entry for $kernels"; done 
+### End of region ###
+
+### Change kernel options ###
+if echo $@ | grep change-options > /dev/null 2>&1
+then
+	echo "Changing Linux Boot Options"
+	BOOTCTL_CMD=$(bootctl list | grep options | head -n1 | cut -f2- -d":")
+	mkdir -p /tmp/update-systemd-boot/
+	echo $BOOTCTL_CMD > /tmp/update-systemd-boot/options
+	editor /tmp/update-systemd-boot/options
+	for entries in $(find $SDB_EFI/loader/entries/$MACHINE_ID*); do sed -i "s#$BOOTCTL_CMD#$(cat /tmp/update-systemd-boot/options)#" "$entries"; done
+	echo "Changed Linux Boot Options"
+	echo "from: $BOOTCTL_CMD"
+	echo "to: $(cat /tmp/update-systemd-boot/options)"
+	rm -rf /tmp/update-systemd-boot/
+fi
