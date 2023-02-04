@@ -2,5 +2,5 @@
 
 set -e
 
-update-systemd-boot -w
+update-systemd-boot -w || echo "systemd-boot hasn't been installed yet"
 
