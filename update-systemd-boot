@@ -118,8 +118,11 @@ then
 	echo "Changing Linux Boot Options"
 	BOOTCTL_CMD=$(bootctl list | grep options | head -n1 | cut -f2- -d":")
 	mkdir -p /tmp/update-systemd-boot/
-	echo $BOOTCTL_CMD > /tmp/update-systemd-boot/options
-	editor /tmp/update-systemd-boot/options
+	if [ ! -f /tmp/update-systemd-boot/options ]
+	then
+		echo $BOOTCTL_CMD > /tmp/update-systemd-boot/options
+		editor /tmp/update-systemd-boot/options
+	fi
 	for entries in $(find $SDB_EFI/loader/entries/$MACHINE_ID*); do sed -i "s#$BOOTCTL_CMD#$(cat /tmp/update-systemd-boot/options)#" "$entries"; done
 	echo "Changed Linux Boot Options"
 	echo "from: $BOOTCTL_CMD"
