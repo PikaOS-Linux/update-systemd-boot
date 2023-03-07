@@ -13,8 +13,9 @@ fi
 mkdir -p /tmp/update-systemd-boot/
 
 ### GLOBAL ENV VARS ###
-SDB_EFI=$(bootctl -x)
-SDB_DRIVE=$(findmnt "$SDB_EFI" | tail +2 | cut -f2 -d" ")
+SDB_BOOT=$(bootctl -x)
+SDB_DRIVE=$(df -P "$SDB_BOOT" | awk 'END{print $1}')
+BOOT_DRIVE=$(df -P "/boot" | awk 'END{print $1}')
 MACHINE_ID=$(cat /etc/machine-id)
 CURRENT_CMD=$(bootctl list | grep options | head -n1 | cut -f2- -d":")
 ### End of region ###
@@ -35,7 +36,7 @@ Arguments:
 -h | | --help: Displays this help message.
 -w | | --with-os-prober: Does the usual Linux entry generation along side using os prober for detecting Windows EFI partitions.
 -x | | --only-os-prober: Uses os prober for detecting Windows EFI partitions without the usual Linux entry generation.
--o | | --change-options: Brings up a text editor to modify the Linux commandline boot options.
+-o | | --change-options: Brings up a text editor to modify the Linux command-line boot options.
  __| |____________________________________________________________________________________________________________________________
 (__| |____________________________________________________________________________________________________________________________)
 EOF
@@ -45,11 +46,11 @@ fi
 ### End of region ###
 
 ### Print system info ###
-if [ -z "$SDB_EFI" ]
+if [ -z "$SDB_BOOT" ]
 then
 	echo "Critical Error! systemd-boot isn't installed." & exit 1
 else
-	echo "systemd-boot EFI path: $SDB_EFI"
+	echo "systemd-boot BOOT path: $SDB_BOOT"
 fi
 
 if [ -z "$SDB_DRIVE" ]
@@ -105,10 +106,17 @@ for kernels in $(find /boot/vmlinuz* | cut -d '-' -f2- | grep -vi vmlinuz); do e
 
 ### Linux Kernel Entry Generation ###
 echo "Removing old entries."
-rm -rfv $SDB_EFI/"$MACHINE_ID"
-rm -rfv $SDB_EFI/loader/entries/"$MACHINE_ID"*
+rm -rfv $SDB_BOOT/"$MACHINE_ID"
+rm -rfv $SDB_BOOT/loader/entries/"$MACHINE_ID"*
 echo "Generating new entries."
-for kernels in $(find /boot/vmlinuz* | cut -d '-' -f2- | grep -vi vmlinuz); do echo "Generating entry for $kernels" && kernel-install add $kernels /boot/vmlinuz-$kernels /boot/initrd.img-$kernels || echo "Failed to Generate an entry for $kernels"; done 
+if [[ $BOOT_DRIVE == $SDB_DRIVE ]]
+then
+for kernels in $(find /boot/vmlinuz* | cut -d '-' -f2- | grep -vi vmlinuz); do echo "Generating entry for $kernels" && echo -e "title\t"$(lsb_release -si)" "$(lsb_release -sr)"\nversion\t$kernels\nmachine-id\t$MACHINE_ID\nsort-key\t"$(lsb_release -si | tr '[:upper:]' '[:lower:]')"\noptions\t$CURRENT_CMD\nlinux\tvmlinuz-$kernels\ninitrd\tinitrd.img-$kernels" > $SDB_BOOT/loader/entries/"$MACHINE_ID"-"$kernels".conf || echo "Failed to Generate an entry for $kernels"; done
+else
+echo 'Warning: /boot is not configured as XBOOTLDR for systemd-boot!'
+echo 'all kernels will be copied to EFI!'
+for kernels in $(find /boot/vmlinuz* | cut -d '-' -f2- | grep -vi vmlinuz); do echo "Generating entry for $kernels" && kernel-install add $kernels /boot/vmlinuz-$kernels /boot/initrd.img-$kernels || echo "Failed to Generate an entry for $kernels"; done
+fi
 ### End of region ###
 
 ### Change kernel options ###
@@ -121,7 +129,7 @@ then
 		echo $BOOTCTL_CMD > /tmp/update-systemd-boot/options
 		editor /tmp/update-systemd-boot/options
 	fi
-	for entries in $(find $SDB_EFI/loader/entries/$MACHINE_ID*); do sed -i "s#$BOOTCTL_CMD#$(cat /tmp/update-systemd-boot/options)#" "$entries"; done
+	for entries in $(find $SDB_BOOT/loader/entries/$MACHINE_ID*); do sed -i "s#$BOOTCTL_CMD#$(cat /tmp/update-systemd-boot/options)#" "$entries"; done
 	echo "Changed Linux Boot Options"
 	echo "from: $BOOTCTL_CMD"
 	echo "to: $(cat /tmp/update-systemd-boot/options)"
@@ -161,7 +169,7 @@ cat << EOF
     '-..-'|_.-''-._|
 EOF
 echo "os-prober has detected a another EFI partition! adding to systemd-boot EFI."
-for efis in $(cat /tmp/update-systemd-boot/efi_partitions | cut -d"/" -f2- ); do mkdir -p /tmp/update-systemd-boot/$efis && mount "/$efis" /tmp/update-systemd-boot/$efis && cp -avx /tmp/update-systemd-boot/$efis/EFI $SDB_EFI/ || echo "not EFI" && umount /tmp/update-systemd-boot/$efis; done
+for efis in $(cat /tmp/update-systemd-boot/efi_partitions | cut -d"/" -f2- ); do mkdir -p /tmp/update-systemd-boot/$efis && mount "/$efis" /tmp/update-systemd-boot/$efis && cp -avx /tmp/update-systemd-boot/$efis/EFI $SDB_BOOT/ || echo "not EFI" && umount /tmp/update-systemd-boot/$efis; done
 exit 0
 fi
 fi

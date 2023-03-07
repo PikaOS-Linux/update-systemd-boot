@@ -10,4 +10,5 @@ Architecture: all
 Depends: systemd,
          systemd-boot,
          os-prober,
+         awk
 Description: PikaOS Wrapper for updating systemd-boot configrations
