@@ -1,0 +1,5 @@
+#!/bin/sh
+
+set -e
+
+systemctl disable --now pika-systemd-boot.service || echo "pika-systemd-boot.service"

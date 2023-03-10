@@ -1,5 +1,12 @@
 update-systemd-boot (1.1-99pika2) kinetic; urgency=low
 
+  * Add xbootldr support
+
+ -- Ward Nakchbandi <hotrod.master@hotmail.com>  Sat, 01 Oct 2022 14:50:00 +0200
+
+
+update-systemd-boot (1.1-99pika2) kinetic; urgency=low
+
   * Fix /etc/kernel script
 
  -- Ward Nakchbandi <hotrod.master@hotmail.com>  Sat, 01 Oct 2022 14:50:00 +0200

@@ -8,6 +8,6 @@ test -x /usr/bin/bootctl || exit 0
 
 bootctl is-installed --quiet || exit 0
 
-update-systemd-boot -x
+update-systemd-boot -w
 
 

@@ -1,0 +1,8 @@
+[Unit]
+Description=Removes default systemd post scripts.
+
+[Service]
+ExecStart=/usr/bin/bash -c "rm -rfv /etc/kernel/postinst.d/systemd-boot || echo 'Expected fail: file does not exist' " && /usr/bin/bash -c "/etc/kernel/postrm.d/systemd-boot || echo 'Expected fail: file does not exist' "
+
+[Install]
+WantedBy=multi-user.target

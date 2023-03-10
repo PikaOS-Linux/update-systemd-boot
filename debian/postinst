@@ -2,5 +2,7 @@
 
 set -e
 
-update-systemd-boot -w || echo "systemd-boot may not configured yet"
+systemctl enable --now pika-systemd-boot.service || echo "pika-systemd-boot.service"
+rm -rfv /etc/kernel/postinst.d/systemd-boot || echo "Expected fail: file does not exist"
+rm -rfv /etc/kernel/postrm.d/systemd-boot || echo "Expected fail: file does not exist"
 
