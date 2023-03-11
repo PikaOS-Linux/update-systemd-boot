@@ -17,7 +17,7 @@ SDB_BOOT=$(bootctl -x)
 SDB_DRIVE=$(df -P "$SDB_BOOT" | awk 'END{print $1}')
 BOOT_DRIVE=$(df -P "/boot" | awk 'END{print $1}')
 MACHINE_ID=$(cat /etc/machine-id)
-CURRENT_CMD=$(bootctl list | grep options | head -n1 | cut -f2- -d":")
+CURRENT_CMD=$(cat /proc/cmdline | cut -f2- -d" ")
 ### End of region ###
 
 ### Help message
@@ -81,7 +81,7 @@ fi
 
 
 ### Linux Kernel Images Detection ###
-if [[ $1 == '-x' ]] ||  [[ $1 == '--only-os-prober' ]]
+if [[ $1 == '-x' ]] ||  [[ $1 == '--only-os-prober' ]] || [[ $1 == '-o' ]] ||  [[ $1 == '--change-options' ]]
 then
 	set -e
 else
@@ -111,30 +111,40 @@ rm -rfv $SDB_BOOT/loader/entries/"$MACHINE_ID"*
 echo "Generating new entries."
 if [[ $BOOT_DRIVE == $SDB_DRIVE ]]
 then
-for kernels in $(find /boot/vmlinuz* | cut -d '-' -f2- | grep -vi vmlinuz); do echo "Generating entry for $kernels" && echo -e "title\t"$(lsb_release -si)" "$(lsb_release -sr)"\nversion\t$kernels\nmachine-id\t$MACHINE_ID\nsort-key\t"$(lsb_release -si | tr '[:upper:]' '[:lower:]')"\noptions\t$CURRENT_CMD\nlinux\tvmlinuz-$kernels\ninitrd\tinitrd.img-$kernels" > $SDB_BOOT/loader/entries/"$MACHINE_ID"-"$kernels".conf || echo "Failed to Generate an entry for $kernels"; done
+for kernels in $(find /boot/vmlinuz* | cut -d '-' -f2- | grep -vi vmlinuz); do echo "Generating entry for $kernels" && echo -e "title\t"$(lsb_release -si)" "$(lsb_release -sr)"\nversion\t"$kernels"\nmachine-id\t"$MACHINE_ID"\nsort-key\t"$(lsb_release -si | tr '[:upper:]' '[:lower:]')"\noptions\t"$CURRENT_CMD"\nlinux\tvmlinuz-"$kernels"\ninitrd\tinitrd.img-"$kernels"" > $SDB_BOOT/loader/entries/"$MACHINE_ID"-"$kernels".conf || echo "Failed to Generate an entry for $kernels"; done
 else
 echo 'Warning: /boot is not configured as XBOOTLDR for systemd-boot!'
 echo 'all kernels will be copied to EFI!'
 for kernels in $(find /boot/vmlinuz* | cut -d '-' -f2- | grep -vi vmlinuz); do echo "Generating entry for $kernels" && kernel-install add $kernels /boot/vmlinuz-$kernels /boot/initrd.img-$kernels || echo "Failed to Generate an entry for $kernels"; done
+fi
 fi
 ### End of region ###
 
 ### Change kernel options ###
 if [[ $1 == '-o' ]] ||  [[ $1 == '--change-options' ]]
 then
-	echo "Changing Linux Boot Options"
-	BOOTCTL_CMD=$(bootctl list | grep options | head -n1 | cut -f2- -d":")
-	if [ ! -f /tmp/update-systemd-boot/options ]
-	then
-		echo $BOOTCTL_CMD > /tmp/update-systemd-boot/options
-		editor /tmp/update-systemd-boot/options
-	fi
-	for entries in $(find $SDB_BOOT/loader/entries/$MACHINE_ID*); do sed -i "s#$BOOTCTL_CMD#$(cat /tmp/update-systemd-boot/options)#" "$entries"; done
-	echo "Changed Linux Boot Options"
-	echo "from: $BOOTCTL_CMD"
-	echo "to: $(cat /tmp/update-systemd-boot/options)"
-	rm -rf /tmp/update-systemd-boot/options
-fi
+  echo "Changing Linux Boot Options"
+  BOOTCTL_CMD=$(cat /proc/cmdline | cut -f2- -d" ")
+  if [ ! -f /tmp/update-systemd-boot/options ]
+  then
+    echo $BOOTCTL_CMD > /tmp/update-systemd-boot/options
+    editor /tmp/update-systemd-boot/options
+  fi
+  ### Linux Kernel Entry Generation ###
+  echo "Removing old entries."
+  rm -rfv $SDB_BOOT/"$MACHINE_ID"
+  rm -rfv $SDB_BOOT/loader/entries/"$MACHINE_ID"*
+  echo "Generating new entries."
+  if [[ $BOOT_DRIVE == $SDB_DRIVE ]]
+  then
+    for kernels in $(find /boot/vmlinuz* | cut -d '-' -f2- | grep -vi vmlinuz); do echo "Generating entry for $kernels" && echo -e "title\t"$(lsb_release -si)" "$(lsb_release -sr)"\nversion\t"$kernels"\nmachine-id\t"$MACHINE_ID"\nsort-key\t"$(lsb_release -si | tr '[:upper:]' '[:lower:]')"\noptions\t"$(cat /tmp/update-systemd-boot/options)"\nlinux\tvmlinuz-"$kernels"\ninitrd\tinitrd.img-"$kernels"" > $SDB_BOOT/loader/entries/"$MACHINE_ID"-"$kernels".conf || echo "Failed to Generate an entry for $kernels"; done
+  else
+    for entries in $(find $SDB_BOOT/loader/entries/$MACHINE_ID*); do sed -i "s#$BOOTCTL_CMD#$(cat /tmp/update-systemd-boot/options)#" "$entries"; done
+  fi
+  echo "Changed Linux Boot Options"
+  echo "from: $BOOTCTL_CMD"
+  echo "to: $(cat /tmp/update-systemd-boot/options)"
+  rm -rf /tmp/update-systemd-boot/options
 fi
 ### End of region ###
 
