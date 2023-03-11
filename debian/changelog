@@ -1,4 +1,4 @@
-update-systemd-boot (1.2-99pika2) kinetic; urgency=low
+update-systemd-boot (1.2-99pika3) kinetic; urgency=low
 
   * Even more fixes
 
