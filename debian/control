@@ -11,5 +11,6 @@ Pre-Depends: systemd, systemd-boot,
 Depends: systemd,
          systemd-boot,
          os-prober,
-         awk
+         awk,
+         efifs,
 Description: PikaOS Wrapper for updating systemd-boot configrations

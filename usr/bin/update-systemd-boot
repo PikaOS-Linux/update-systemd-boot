@@ -15,6 +15,12 @@ mkdir -p /tmp/update-systemd-boot/
 ### GLOBAL ENV VARS ###
 SDB_BOOT=$(bootctl -x)
 SDB_DRIVE=$(df -P "$SDB_BOOT" | awk 'END{print $1}')
+if [[ $(bootctl -x) != $(bootctl -p) ]]
+then
+SDB_EFI=""$(bootctl -x)""$(bootctl -p)""
+else
+SDB_EFI=$(bootctl -p)
+fi
 BOOT_DRIVE=$(df -P "/boot" | awk 'END{print $1}')
 MACHINE_ID=$(cat /etc/machine-id)
 CURRENT_CMD=$(cat /proc/cmdline | cut -f2- -d" ")
@@ -60,6 +66,13 @@ else
 	echo "systemd-boot partition: $SDB_DRIVE"
 fi
 
+if [ -z "$SDB_EFI" ]
+then
+	echo "Critical Error! systemd-boot isn't installed." & exit 1
+else
+	echo "systemd-boot EFI path: $SDB_EFI"
+fi
+
 echo "Other EFI partitions:"
 rm -rf /tmp/update-systemd-boot/efi_partitions
 for partitions in $(os-prober | cut -d/ -f1-3 | tr -d '@' | grep -vi "$SDB_DRIVE" ); do echo "$partitions" > /tmp/update-systemd-boot/efi_partitions && echo "$partitions"; done
@@ -78,7 +91,10 @@ then
 else
 	echo "Kernel Boot Options: $CURRENT_CMD"
 fi
-
+### Install efifs drivers
+mkdir -p $SDB_EFI/EFI/systemd/drivers
+echo "Installing\Updating EFI filesystem drivers"
+cp -rvf /usr/lib/efifs/drivers/* $SDB_EFI/EFI/systemd/drivers/
 
 ### Linux Kernel Images Detection ###
 if [[ $1 == '-x' ]] ||  [[ $1 == '--only-os-prober' ]] || [[ $1 == '-o' ]] ||  [[ $1 == '--change-options' ]]
@@ -179,7 +195,7 @@ cat << EOF
     '-..-'|_.-''-._|
 EOF
 echo "os-prober has detected a another EFI partition! adding to systemd-boot EFI."
-for efis in $(cat /tmp/update-systemd-boot/efi_partitions | cut -d"/" -f2- ); do mkdir -p /tmp/update-systemd-boot/$efis && mount "/$efis" /tmp/update-systemd-boot/$efis && cp -avx /tmp/update-systemd-boot/$efis/EFI $SDB_BOOT/ || echo "not EFI" && umount /tmp/update-systemd-boot/$efis; done
+for efis in $(cat /tmp/update-systemd-boot/efi_partitions | cut -d"/" -f2- ); do mkdir -p /tmp/update-systemd-boot/$efis && mount "/$efis" /tmp/update-systemd-boot/$efis && cp -avx /tmp/update-systemd-boot/$efis/EFI $SDB_EFI/ || echo "not EFI" && umount /tmp/update-systemd-boot/$efis; done
 exit 0
 fi
 fi
