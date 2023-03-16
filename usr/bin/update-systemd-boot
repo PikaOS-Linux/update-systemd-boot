@@ -91,6 +91,10 @@ then
 else
 	echo "Kernel Boot Options: $CURRENT_CMD"
 fi
+
+### Clear NVRAM timeout
+bootctl set-timeout ""
+
 ### Install efifs drivers
 mkdir -p $SDB_EFI/EFI/systemd/drivers
 echo "Installing\Updating EFI filesystem drivers"
