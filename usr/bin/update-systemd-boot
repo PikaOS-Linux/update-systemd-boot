@@ -88,7 +88,7 @@ else
 fi
 
 ### Clear NVRAM timeout
-bootctl set-timeout ""
+bootctl set-timeout "" || efibootmgr -t -1 || true
 
 ### Install efifs drivers
 mkdir -p $SDB_EFI/EFI/systemd/drivers
