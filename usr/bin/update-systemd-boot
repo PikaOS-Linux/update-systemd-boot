@@ -16,6 +16,7 @@ mkdir -p /tmp/update-systemd-boot/
 SDB_BOOT=$(bootctl -x)
 SDB_DRIVE=$(df -P "$SDB_BOOT" | awk 'END{print $1}')
 SDB_EFI=$(bootctl -p)
+SDB_DRIVE_EFI=$(df -P "$SDB_EFI" | awk 'END{print $1}')
 BOOT_DRIVE=$(df -P "/boot" | awk 'END{print $1}')
 MACHINE_ID=$(cat /etc/machine-id)
 CURRENT_CMD=$(cat /proc/cmdline | cut -f2- -d" ")
@@ -70,7 +71,7 @@ fi
 
 echo "Other EFI partitions:"
 rm -rf /tmp/update-systemd-boot/efi_partitions
-for partitions in $(os-prober | cut -d/ -f1-3 | tr -d '@' | grep -vi "$SDB_DRIVE" ); do echo "$partitions" > /tmp/update-systemd-boot/efi_partitions && echo "$partitions"; done
+for partitions in $(os-prober | cut -d/ -f1-3 | tr -d '@' | grep -vi "$SDB_DRIVE_EFI" ); do echo "$partitions" > /tmp/update-systemd-boot/efi_partitions && echo "$partitions"; done
 
 
 if [ -z "$MACHINE_ID" ]
@@ -88,7 +89,8 @@ else
 fi
 
 ### Clear NVRAM timeout
-bootctl set-timeout "" || efibootmgr -t -1 || true
+#bootctl set-timeout "" || efibootmgr -t -1 || true
+# Disabled : breaking some UEFI systems
 
 ### Install efifs drivers
 mkdir -p $SDB_EFI/EFI/systemd/drivers
