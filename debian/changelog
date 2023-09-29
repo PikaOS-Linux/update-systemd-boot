@@ -1,3 +1,9 @@
+update-systemd-boot (1.4-100pika3) pikauwu; urgency=low
+
+  * Just Rebuild in pikauwu for old installs
+
+ -- Ward Nakchbandi <hotrod.master@hotmail.com>  Sat, 01 Oct 2022 14:50:00 +0200
+
 update-systemd-boot (1.4-99pika3-lunar) lunar; urgency=low
 
   * Just Rebuild in lunar for old installs

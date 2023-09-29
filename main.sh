@@ -1,3 +1,5 @@
+#! /bin/bash
+
 DEBIAN_FRONTEND=noninteractive
 
 # Clone Upstream
@@ -9,7 +11,7 @@ cd ./update-systemd-boot
 apt-get build-dep ./ -y
 
 # Build package
-dpkg-buildpackage
+dpkg-buildpackage --no-sign
 
 # Move the debs to output
 cd ../
